@@ -1,0 +1,361 @@
+
+
+<!-- save as index.html -->
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cherrak Global Vault AI — Portal</title>
+<style>
+  :root{
+    --bg:#020617; --card:#07111a; --accent:#00e0ff; --muted:#9ad8ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Tahoma, Arial, sans-serif;background:var(--bg);color:#e8f8ff}
+  header{padding:14px 16px;text-align:center;background:rgba(0,0,0,0.25);position:relative;z-index:20}
+  header h1{margin:0;color:var(--accent);font-size:20px}
+  .topbar{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:8px;flex-wrap:wrap}
+  .clock{color:#00ffb3;font-weight:700}
+  .vaults{display:flex;gap:12px;justify-content:center;padding:12px;flex-wrap:wrap}
+  .vault-card{background:rgba(2,12,28,0.85);border-radius:12px;padding:12px;width:320px;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,0.6);text-align:center}
+  .locks{display:flex;gap:8px;justify-content:center;margin:8px 0}
+  .lock{display:flex;flex-direction:column;align-items:center;font-size:13px}
+  .lock i{font-size:28px;margin-bottom:6px}
+  .btn{background:linear-gradient(90deg,var(--accent),#00bfff);border:none;padding:8px 12px;border-radius:8px;color:#001;cursor:pointer;font-weight:700}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#e8f8ff}
+  main{padding:12px;position:relative;z-index:20}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.6);display:flex;gap:10px;align-items:center}
+  .card img{width:52px;height:52px;border-radius:8px;flex-shrink:0}
+  .card .meta{flex:1}
+  .title{color:var(--accent);font-weight:700}
+  .desc{color:var(--muted);font-size:13px;margin-top:6px}
+  .card .open{margin-left:8px}
+  footer{padding:12px;text-align:center;color:#9ad8ff;opacity:0.9}
+
+  /* modal */
+  .modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal{background:#021022;padding:16px;border-radius:10px;max-width:420px;width:92%;box-shadow:0 10px 40px rgba(0,0,0,0.7)}
+  .modal h3{margin:0 0 8px 0;color:var(--accent)}
+  .row{display:flex;gap:8px;align-items:center}
+  .status{padding:8px;border-radius:8px;background:rgba(255,255,255,0.03);color:#bfeffc}
+
+  /* galaxy canvas behind */
+  canvas#g{position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;filter:blur(0.6px) saturate(120%)}
+  /* responsive */
+  @media(max-width:600px){
+    .vault-card{width:92%}
+    .card{flex-direction:row}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="g"></canvas>
+
+<header>
+  <h1>Cherrak Global Vault AI — البوابة العالمية</h1>
+  <div class="topbar">
+    <div class="clock" id="utcClock">التوقيت العالمي: --:--:--</div>
+    <button class="btn ghost" id="openVaultsListBtn">عرض حالة البوابات</button>
+  </div>
+</header>
+
+<div class="vaults" id="vaultsContainer" style="justify-content:center">
+  <!-- Vault 1 -->
+  <div class="vault-card" id="vault1Card">
+    <div style="font-weight:800;font-size:16px;color:var(--accent)">البوابة الأولى — الخزنة العالمية 🔐🔐🔐</div>
+    <div style="margin-top:8px;color:#cfefff">تتطلب فتح كل الأقفال الثلاثة</div>
+    <div class="locks">
+      <div class="lock" id="lockPass">
+        <i>🔑</i>
+        <div>كلمة (Bismillah)</div>
+        <div class="status" id="lockPassStatus">مقفل</div>
+      </div>
+      <div class="lock" id="lockFinger">
+        <i>🧿</i>
+        <div>بصمة الإصبع (نظام)</div>
+        <div class="status" id="lockFingerStatus">مقفل</div>
+      </div>
+      <div class="lock" id="lockFace">
+        <i>🗿</i>
+        <div>بصمة الوجه (نظام)</div>
+        <div class="status" id="lockFaceStatus">مقفل</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;justify-content:center">
+      <button class="btn" onclick="unlockPass()">ادخل كلمة Bismillah</button>
+      <button class="btn" onclick="simulateBiometric('finger')">محاكاة بصمة</button>
+      <button class="btn" onclick="simulateBiometric('face')">محاكاة وجه</button>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn" id="openAppsBtn" onclick="enterApps()" disabled>الدخول إلى التطبيقات (مقفل)</button>
+    </div>
+  </div>
+
+  <!-- Vault 2 -->
+  <div class="vault-card" id="vault2Card">
+    <div style="font-weight:800;font-size:16px;color:var(--accent)">البوابة الثانية — تحقق بريد/كلمة 🔐🔐</div>
+    <div style="margin-top:8px;color:#cfefff">أدخل الإيميل وكلمة المرور لفتح</div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;align-items:center">
+      <input id="vault2Email" placeholder="البريد الإلكتروني" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);width:88%;background:transparent;color:#fff">
+      <input id="vault2Pass" placeholder="كلمة المرور" type="password" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);width:88%;background:transparent;color:#fff">
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn" onclick="unlockVault2()">تسجيل وفتح</button>
+        <button class="btn ghost" onclick="clearVault2()">مسح</button>
+      </div>
+      <div id="vault2Status" style="margin-top:6px;color:#9ad8ff;font-weight:700">حالة: مقفل</div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div style="margin:6px 12px;color:#9ad8ff">قائمة التطبيقات — اضغط "فتح" لتشغيل أي تطبيق. (التطبيقات متوقفة حتى تفتح البوابة الأولى أو الثانية)</div>
+  <div class="grid" id="appGrid"></div>
+</main>
+
+<footer>© Cherrak Global Vault AI — جاهز للتطوير والربط بالـ API الخاص بك</footer>
+
+<!-- modal -->
+<div class="modal-back" id="modalBack">
+  <div class="modal" id="modal">
+    <h3 id="modalTitle">عنوان</h3>
+    <div id="modalBody">محتوى</div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn ghost" onclick="closeModal()">إغلاق</button>
+      <button class="btn" id="modalActionBtn" onclick="closeModal()">حسناً</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==================== بيانات التطبيقات (50) ==================== */
+const apps = [
+  {id:1,  name:"Cherrak Guard", desc:"مراقبة ورصد الأمان في الوقت الحقيقي", icon:"https://via.placeholder.com/52?text=1"},
+  {id:2,  name:"Cherrak Protect", desc:"حماية الحسابات من الاختراق", icon:"https://via.placeholder.com/52?text=2"},
+  {id:3,  name:"Cherrak Verify AI", desc:"المصادقة الثنائية الذكية", icon:"https://via.placeholder.com/52?text=3"},
+  {id:4,  name:"Cherrak FraudWatch", desc:"كشف الاحتيال المتقدم", icon:"https://via.placeholder.com/52?text=4"},
+  {id:5,  name:"Cherrak Lock", desc:"تجميد وفتح البطاقات", icon:"https://via.placeholder.com/52?text=5"},
+  {id:6,  name:"Cherrak SecureLink", desc:"تأمين الربط مع حسابات خارجية", icon:"https://via.placeholder.com/52?text=6"},
+  {id:7,  name:"Cherrak Stealth", desc:"وضع التخفي لحماية المعاملات", icon:"https://via.placeholder.com/52?text=7"},
+  {id:8,  name:"Cherrak Audit Log", desc:"سجل شامل للأنشطة", icon:"https://via.placeholder.com/52?text=8"},
+  {id:9,  name:"Cherrak SafeKey", desc:"إدارة مفاتيح التشفير", icon:"https://via.placeholder.com/52?text=9"},
+  {id:10, name:"Cherrak Privacy Shield", desc:"حماية خصوصية البيانات", icon:"https://via.placeholder.com/52?text=10"},
+  {id:11, name:"Cherrak Entrepreneur", desc:"أدوات ريادة الأعمال", icon:"https://via.placeholder.com/52?text=11"},
+  {id:12, name:"Cherrak Expense Tracker", desc:"تتبع النفقات والتقارير", icon:"https://via.placeholder.com/52?text=12"},
+  {id:13, name:"Cherrak Budget Flow", desc:"إدارة الميزانيات", icon:"https://via.placeholder.com/52?text=13"},
+  {id:14, name:"Cherrak Investor AI", desc:"تحليلات ومتابعة الاستثمارات", icon:"https://via.placeholder.com/52?text=14"},
+  {id:15, name:"Cherrak Invoicing", desc:"إصدار الفواتير ومتابعتها", icon:"https://via.placeholder.com/52?text=15"},
+  {id:16, name:"Cherrak Crypto Vault", desc:"إدارة المحفظة المشفرة", icon:"https://via.placeholder.com/52?text=16"},
+  {id:17, name:"Cherrak Tax Prep", desc:"مساعدة بالإقرارات الضريبية", icon:"https://via.placeholder.com/52?text=17"},
+  {id:18, name:"Cherrak Loan Advisor", desc:"خطط السداد وإدارة القروض", icon:"https://via.placeholder.com/52?text=18"},
+  {id:19, name:"Cherrak Goal Setter", desc:"تحديد أهداف الادخار", icon:"https://via.placeholder.com/52?text=19"},
+  {id:20, name:"Cherrak Asset View", desc:"مراقبة الأصول المالية", icon:"https://via.placeholder.com/52?text=20"},
+  {id:21, name:"Cherrak Voyager AI", desc:"إدارة نفقات السفر", icon:"https://via.placeholder.com/52?text=21"},
+  {id:22, name:"Cherrak Exchange", desc:"محول عملات في الوقت الحقيقي", icon:"https://via.placeholder.com/52?text=22"},
+  {id:23, name:"Cherrak Wallet", desc:"محفظة متعددة العملات", icon:"https://via.placeholder.com/52?text=23"},
+  {id:24, name:"Cherrak Travel Insure", desc:"تأمين السفر الذكي", icon:"https://via.placeholder.com/52?text=24"},
+  {id:25, name:"Cherrak ATM Finder", desc:"إيجاد أقرب الصرافات", icon:"https://via.placeholder.com/52?text=25"},
+  {id:26, name:"Cherrak Global Transfer", desc:"تحويلات دولية سريعة", icon:"https://via.placeholder.com/52?text=26"},
+  {id:27, name:"Cherrak Guides", desc:"دليل الوجهات والدفع", icon:"https://via.placeholder.com/52?text=27"},
+  {id:28, name:"Cherrak VAT Refund", desc:"استرداد ضريبة القيمة المضافة", icon:"https://via.placeholder.com/52?text=28"},
+  {id:29, name:"Cherrak Roaming Pay", desc:"ادارة نفقات التجوال", icon:"https://via.placeholder.com/52?text=29"},
+  {id:30, name:"Cherrak Multi-Account", desc:"إدارة حسابات متعددة", icon:"https://via.placeholder.com/52?text=30"},
+  {id:31, name:"Cherrak HealthPay", desc:"مدفوعات الرعاية الصحية", icon:"https://via.placeholder.com/52?text=31"},
+  {id:32, name:"Cherrak Student", desc:"خدمات مالية للطلاب", icon:"https://via.placeholder.com/52?text=32"},
+  {id:33, name:"Cherrak Family Budget", desc:"ميزانيات الأسرة", icon:"https://via.placeholder.com/52?text=33"},
+  {id:34, name:"Cherrak E-Commerce", desc:"حلول الدفع للتجارة", icon:"https://via.placeholder.com/52?text=34"},
+  {id:35, name:"Cherrak Bills", desc:"دفع الفواتير تلقائياً", icon:"https://via.placeholder.com/52?text=35"},
+  {id:36, name:"Cherrak Fleet Card", desc:"إدارة بطاقات الأسطول", icon:"https://via.placeholder.com/52?text=36"},
+  {id:37, name:"Cherrak Event Pay", desc:"ادارة مدفوعات الفعاليات", icon:"https://via.placeholder.com/52?text=37"},
+  {id:38, name:"Cherrak Gift", desc:"بطاقات الهدايا الرقمية", icon:"https://via.placeholder.com/52?text=38"},
+  {id:39, name:"Cherrak Cloud Bills", desc:"مراقبة مصاريف السحابة", icon:"https://via.placeholder.com/52?text=39"},
+  {id:40, name:"Cherrak Partner Link", desc:"ربط الشركاء وAPI", icon:"https://via.placeholder.com/52?text=40"},
+  {id:41, name:"Cherrak Study", desc:"منصة تعليمية ذكية", icon:"https://via.placeholder.com/52?text=41"},
+  {id:42, name:"Cherrak Music", desc:"موسيقى وقوائم تشغيل", icon:"https://via.placeholder.com/52?text=42"},
+  {id:43, name:"Cherrak Gallery", desc:"معرض الصور والفيديو", icon:"https://via.placeholder.com/52?text=43"},
+  {id:44, name:"Cherrak Maps Lite", desc:"خرائط خفيفة وسريعة", icon:"https://via.placeholder.com/52?text=44"},
+  {id:45, name:"Cherrak Chat Bot", desc:"بوت دردشة ذكي", icon:"https://via.placeholder.com/52?text=45"},
+  {id:46, name:"Cherrak OCR", desc:"قراءة النص من الصور", icon:"https://via.placeholder.com/52?text=46"},
+  {id:47, name:"Cherrak Events", desc:"إدارة وتنظيم فعاليات", icon:"https://via.placeholder.com/52?text=47"},
+  {id:48, name:"Cherrak Rewards", desc:"نظام نقاط ومكافآت", icon:"https://via.placeholder.com/52?text=48"},
+  {id:49, name:"Cherrak Reports", desc:"تقارير وتحليلات متقدمة", icon:"https://via.placeholder.com/52?text=49"},
+  {id:50, name:"Cherrak Infinity", desc:"بوابة المشاريع والتطبيقات الكاملة", icon:"https://via.placeholder.com/52?text=50"}
+];
+
+/* ==================== حالة البوابات ==================== */
+let state = {
+  vault1: {pass:false,finger:false,face:false,unlocked:false},
+  vault2: {email:null,pass:null,unlocked:false}
+};
+
+/* ==================== تهيئة الساعة العالمية ==================== */
+function updateClock(){
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  const s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('utcClock').innerText = `التوقيت العالمي UTC: ${h}:${m}:${s}`;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+/* ==================== مجرة متحركة (Canvas) ==================== */
+const canvas = document.getElementById('g');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+addEventListener('resize', resizeCanvas);
+resizeCanvas();
+const stars = [];
+for(let i=0;i<350;i++) stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,z:Math.random()*canvas.width});
+let angle = 0;
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx = canvas.width/2, cy=canvas.height/2;
+  for(let i=0;i<stars.length;i++){
+    const s = stars[i];
+    s.z -= 2;
+    if(s.z <= 0){ s.z = canvas.width; s.x = Math.random()*canvas.width; s.y = Math.random()*canvas.height; }
+    const k = 128.0 / s.z;
+    const px = (s.x - cx)*k + cx;
+    const py = (s.y - cy)*k + cy;
+    const size = Math.max(0.5, (1 - s.z/canvas.width)*3);
+    ctx.fillStyle = `hsla(${(i*7 + angle*30)%360},70%,70%,${Math.min(1,1 - s.z/canvas.width)})`;
+    ctx.beginPath();
+    ctx.arc(px,py,size,0,Math.PI*2);
+    ctx.fill();
+  }
+  angle += 0.002;
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* ==================== تحميل واجهة التطبيقات ==================== */
+function renderApps(){
+  const grid = document.getElementById('appGrid');
+  grid.innerHTML = '';
+  for(const a of apps){
+    const card = document.createElement('div'); card.className='card';
+    card.innerHTML = `
+      <img src="${a.icon}" alt="${a.name}">
+      <div class="meta">
+        <div class="title">${a.name}</div>
+        <div class="desc">${a.desc}</div>
+      </div>
+      <div class="open">
+        <button class="btn" onclick="openApp(${a.id})" ${!isAnyVaultOpen() ? 'disabled title=\"افتح أولاً البوابة\"' : ''}>فتح</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+}
+renderApps();
+
+/* ==================== تحقق حالة البوابات ==================== */
+function updateVaultUI(){
+  document.getElementById('lockPassStatus').innerText = state.vault1.pass ? 'مفتوح' : 'مقفل';
+  document.getElementById('lockFingerStatus').innerText = state.vault1.finger ? 'مفتوح' : 'مقفل';
+  document.getElementById('lockFaceStatus').innerText = state.vault1.face ? 'مفتوح' : 'مقفل';
+  const unlocked = state.vault1.pass && state.vault1.finger && state.vault1.face;
+  state.vault1.unlocked = unlocked;
+  document.getElementById('openAppsBtn').disabled = !unlocked;
+  document.getElementById('openAppsBtn').innerText = unlocked ? 'الدخول إلى التطبيقات (مفتوح)' : 'الدخول إلى التطبيقات (مقفل)';
+  document.getElementById('vault2Status').innerText = state.vault2.unlocked ? 'حالة: مفتوح' : 'حالة: مقفل';
+  // تحديث أزرار فتح التطبيقات
+  const openButtons = document.querySelectorAll('#appGrid .btn');
+  openButtons.forEach(btn => btn.disabled = !isAnyVaultOpen());
+}
+function isAnyVaultOpen(){ return state.vault1.unlocked || state.vault2.unlocked; }
+
+/* ==================== وظائف البوابات ==================== */
+function unlockPass(){
+  const p = prompt('اكتب كلمة Bismillah للفتح:').trim();
+  if(p.toLowerCase() === 'bismillah'){
+    state.vault1.pass = true;
+    showModal('نجاح', 'تم قبول كلمة Bismillah. الآن افتح البصمة والوجه.');
+  } else showModal('خطأ', 'كلمة غير صحيحة.');
+  updateVaultUI();
+}
+function simulateBiometric(type){
+  // محاكاة تأكيد نظام البصمة أو الوجه
+  showModal('التحقق البيومتري', 'جارٍ التحقق من ' + (type==='finger'?'بصمة الإصبع':'بصمة الوجه') + '...');
+  setTimeout(()=> {
+    if(type==='finger') state.vault1.finger = true;
+    else state.vault1.face = true;
+    showModal('نجاح', (type==='finger'?'بصمة الإصبع':'بصمة الوجه') + ' تم التحقق منها.');
+    updateVaultUI();
+  }, 900);
+}
+
+function enterApps(){
+  if(state.vault1.unlocked) {
+    document.getElementById('appGrid').scrollIntoView({behavior:'smooth'});
+    showModal('مرحباً', 'بوابة الخزنة الأولى مفتوحة — يمكنك فتح التطبيقات الآن.');
+  } else showModal('مغلق', 'افتح جميع الأقفال الثلاثة أولاً.');
+}
+
+function unlockVault2(){
+  const email = document.getElementById('vault2Email').value.trim();
+  const pass = document.getElementById('vault2Pass').value.trim();
+  if(!email || !pass){ showModal('خطأ', 'ادخل الإيميل وكلمة المرور.'); return; }
+  // للمحاكاة: نعتبر أن أي إيميل يحتوي على 'cherrak' مقبول، أو كلمة 'cherrak2025'
+  if(email.includes('cherrak') || pass === 'cherrak2025'){
+    state.vault2.email = email; state.vault2.pass = pass; state.vault2.unlocked = true;
+    showModal('نجاح', 'تم فتح البوابة الثانية بنجاح.');
+  } else {
+    showModal('فشل', 'بيانات غير صحيحة. جرب: email يحتوي cherrak أو كلمة cherrak2025');
+  }
+  updateVaultUI();
+}
+function clearVault2(){ document.getElementById('vault2Email').value=''; document.getElementById('vault2Pass').value=''; }
+
+/* ==================== محاكاة API وفتح التطبيقات ==================== */
+const runningApps = new Set();
+function openApp(id){
+  const app = apps.find(a=>a.id===id);
+  if(!app) return;
+  // منع إعادة التشغيل المتكرر
+  if(runningApps.has(id)){ showModal(app.name, 'التطبيق يعمل الآن بالفعل.'); return; }
+
+  showModal(app.name, 'جارٍ تشغيل التطبيق — الاتصال بـ API ...');
+  // محاكاة استدعاء API لمدة نصف ثانية إلى 1.2s
+  const delay = 500 + Math.floor(Math.random()*800);
+  setTimeout(()=>{
+    runningApps.add(id);
+    renderApps(); // لتحديث أزرار (تعطيل أو لا)
+    showModal(app.name, `✅ ${app.name} شغّال الآن!\n\nوصف: ${app.desc}\n\nملاحظة: هذه محاكاة محليّة. لربط التطبيق بخادم حقيقي، استخدم API endpoint في apiService.`);
+  }, delay);
+}
+
+/* ==================== مودال بسيط ==================== */
+function showModal(title, html){
+  document.getElementById('modalTitle').innerText = title;
+  document.getElementById('modalBody').innerText = html;
+  document.getElementById('modalBack').style.display='flex';
+}
+function closeModal(){
+  document.getElementById('modalBack').style.display='none';
+}
+
+/* ==================== زر حالة البوابات (عرض) ==================== */
+document.getElementById('openVaultsListBtn').addEventListener('click', ()=>{
+  const s = `حالة البوابة الأولى:\n  كلمة: ${state.vault1.pass ? 'مفتوحة' : 'مقفلة'}\n  بصمة: ${state.vault1.finger ? 'مفتوحة' : 'مقفلة'}\n  وجه: ${state.vault1.face ? 'مفتوحة' : 'مقفلة'}\n\nحالة البوابة الثانية: ${state.vault2.unlocked ? 'مفتوحة' : 'مقفلة'}`;
+  showModal('حالة البوابات', s);
+});
+
+/* ====================تهيئة واجهة / إعادة تحميل التطبيقات مع التحكم في الأزرار ==================== */
+updateVaultUI();
+renderApps();
+
+/* ==================== تعليمات إضافية (اختياري) ==================== */
+/*
+ - لربط كل تطبيق مع API حقيقي: استبدل وظيفة openApp بالدالة التي تستخدم fetch(API_BASE + '/apps/{id}/start')
+ - لإضافة أيقونات حقيقية: ضع روابط الأيقونات في بيانات apps[].icon
+ - لتحويل الموقع إلى تطبيق APK: ضع هذا الملف في GitHub Pages واستخدم WebView wrapper في App Builder مثل Kodular أو AppCreator24
+*/
+</script>
+
+</body>
+</html>
+
